@@ -39,6 +39,11 @@ int main(int argc, char **argv){
         }
 
 
+         if(strcmp(argv[i], "-t")==0 || strcmp(argv[i], "-thresh") ==0 ){
+            EM_thresh = atof(argv[++i]);
+            continue;
+        }
+
 
         fprintf(stderr, "Error: undefined option %s\n", argv[i]);
         show_banner();
@@ -57,7 +62,9 @@ int main(int argc, char **argv){
 
     // a global variable 
     controller con;
+    fprintf(stderr, "Loading data ...\n");
     con.load_data(data_file, use_zval);
-
+    fprintf(stderr, "Starting EM algorithm ...\n");
+    con.run_EM(EM_thresh);
 
 }

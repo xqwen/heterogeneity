@@ -41,6 +41,7 @@ void controller::load_data(char *filename, int use_zval){
         ins.str(line);
 
         ins>>loc_id;
+        loc_vec.push_back(loc_id);
 
         vector<double> beta_vec;
         vector<double> se_vec;
@@ -58,7 +59,6 @@ void controller::load_data(char *filename, int use_zval){
             se_vec.push_back(se_beta);
 
 
-            loc_vec.push_back(loc_id);
 
             if(se_beta<min)
                 min = se_beta;
@@ -84,21 +84,20 @@ void controller::load_data(char *filename, int use_zval){
     if(phi_max<phi_min){
         phi_max = 8*phi_min;
     }
+    /*
+       k_vec.push_back(0);
+       k_vec.push_back(0);
 
-    //make_grid(phi_min, phi_max);
-    k_vec.push_back(0.4);
-    k_vec.push_back(1);
-    k_vec.push_back(10);
+       omg2_vec.push_back(0);
+       omg2_vec.push_back(1);
+       */
 
-    omg2_vec.push_back(1e-8);
-    omg2_vec.push_back(1e-8);
-    omg2_vec.push_back(1e-8);
-
+    make_grid(phi_min, phi_max);
     K = k_vec.size()+1;
     N = beta_matrix.size();
 
 
-    fprintf(stderr, "Initializing ... \n");
+    //fprintf(stderr, "Initializing ... \n");
 
 
     //fprintf(stderr, "N=%d\t K=%d\t L=%d\t  M=%d\n", N, grid_size, annot_size, K);
@@ -109,11 +108,18 @@ void controller::load_data(char *filename, int use_zval){
     //    log10_BF_matrix.push_back(bf_vec);  
     BF_CEF bfc;
     for(int i=0;i<N;i++){
+
         vector<double> bf_vec = bfc.compute_log10_BF(beta_matrix[i], se_matrix[i], k_vec, omg2_vec);
-        for(int k=0;k<bf_vec.size();k++){
-            printf("%7.3f ",bf_vec[k]);
-        }
-        printf("\n");
+        bf_vec.insert(bf_vec.begin(),0.0);
+        log10_BF_matrix.push_back(bf_vec);
+
+        /*
+        //printf("%4d  ", i+1);
+        //for(int k=0;k<bf_vec.size();k++){
+        //    printf("%7.3f ",bf_vec[k]);
+        //}
+        //printf("\n");
+        */
     }
 }
 
@@ -130,22 +136,69 @@ void controller::make_grid(double phi_min, double phi_max){
     std::sort(gvec.begin(),gvec.end());
 
 
-
-    vector<double> kvalue_vec{0.01, 0.462, 0.513, 0.618, 0.820, 1.0, 2.0, 10.0};
+    vector<double> ovalue_vec{0.1, 0.4, 1, 1.6, 3.2, 6.4};
+    vector<double> kvalue_vec{0.01, 0.462, 0.513, 0.618, 2.0, 10.0};
     for(int j=0;j<kvalue_vec.size();j++){
-        for(int i=0;i<gvec.size();i++){
+        for(int i=0;i<ovalue_vec.size();i++){
             k_vec.push_back(kvalue_vec[j]);
-            double omg2 = pow(gvec[i],2)/(1+pow(kvalue_vec[j],2));
-            omg2_vec.push_back(omg2);
+            //double omg2 = pow(gvec[i],2)/(1+pow(kvalue_vec[j],2));
+            omg2_vec.push_back(pow(ovalue_vec[i],2));
         }
     }
 
     /*
-    for(int i=0;i<k_vec.size();i++){
-        printf("%3d   %7.3f  %7.3f\n",i+1, k_vec[i], omg2_vec[i]);
-    }
-    */
+       for(int i=0;i<k_vec.size();i++){
+       printf("%3d   %7.3f  %7.3f\n",i+1, k_vec[i], omg2_vec[i]);
+       }
+       */
     return;
 
 }
+
+
+void controller::run_EM(double thresh){
+
+    vector<double> wts_vec(K, 0.05/(K-1));
+    wts_vec[0] = 0.95;
+    double final_loglik = gem.EM_run(log10_BF_matrix, wts_vec, thresh);
+
+
+    wts_vec = gem.get_estimate();
+    double null_prob = wts_vec[0];
+    double rep_prob = 0;
+    double irp_prob = 0;
+    for(int i=1;i<wts_vec.size();i++){
+        if(k_vec[i-1]<=0.618)
+            rep_prob += wts_vec[i];
+        else
+            irp_prob += wts_vec[i];
+    }
+
+
+    fprintf(stderr, "\n\n%15s %7.3f\n%15s %7.3f\n%15s %7.3f\n\n", "Null:", null_prob, "Reproducible:", rep_prob, "Irreproducible:", irp_prob);;
+
+
+    // get posterior probabilities
+    vector<vector<double> > P_matrix = gem.get_P_matrix();
+    //vector<double> rp_vec;
+    for(int i=0;i<N;i++){
+        double rep_prob = 0;
+        double irp_prob = 0;
+        for(int k=1;k<K;k++){
+            if(k_vec[k-1]<=0.618)
+                rep_prob += P_matrix[i][k];
+            else
+                irp_prob += P_matrix[i][k];
+        }
+    
+        printf("%10s   %7.3e %7.3e %7.3e\n", loc_vec[i].c_str(), P_matrix[i][0], irp_prob, rep_prob );
+    }
+
+
+
+}
+
+
+
+
 

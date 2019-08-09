@@ -2,14 +2,14 @@ using namespace std;
 
 #include <vector>
 #include <string>
-
+#include "GenEM_mixture.h"
 
 class controller {
 
     public:
         
         void load_data(char *data_filei, int use_zval);
-               
+        void run_EM(double thresh=0.05);              
     
     private:
 
@@ -21,6 +21,7 @@ class controller {
 
         vector<vector<double> > log10_BF_matrix;
 
+        GenEM_mixture gem;
         void make_grid(double min, double max);
 
 };
