@@ -220,7 +220,7 @@ void controller::run_EM(double thresh){
     string pip_file = prefix + string("intrigue.pip");
     fd = fopen(pip_file.c_str(), "w");
     
-    
+    fprintf(fd, "Gene\tnull_prob\tirrep_prob\trep_prob\n"); 
     //vector<double> rp_vec;
     for(int i=0;i<N;i++){
         double rep_prob = 0;
