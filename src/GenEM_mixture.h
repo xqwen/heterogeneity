@@ -11,11 +11,14 @@ class GenEM_mixture : public GenEM {
         vector<vector<double> > P_matrix;   //  (NxK) 
 
         void EM_init(vector<vector<double> >& BF_in, vector<double> & init_wts);
+        vector<double> pseudo_count_vec;
         double EM_update();
+
+        double pseudo_count;
 
     public:
 
-        double EM_run(vector<vector<double> >& BF_in, vector<double> & init_wts, double thresh);
+        double EM_run(vector<vector<double> >& BF_in, vector<double> & init_wts, double thresh,double pseudo = 0);
         vector<double> get_estimate(){
             return wts_matrix;
         }

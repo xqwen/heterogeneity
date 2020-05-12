@@ -5,7 +5,13 @@ using namespace std;
 #include <stdlib.h>
 #include <stdio.h>
 
+
+
+
+
 void GenEM_mixture::EM_init(vector<vector<double> >& log10_BF_in, vector<double> & init_wts){
+    
+    pseudo_count = 0;
 
     K = int(init_wts.size());
     N = int(log10_BF_in.size());
@@ -42,7 +48,7 @@ double GenEM_mixture::EM_update(){
         log10_lik += log10_BF_avg[i];
     }
 
-    vector<double> new_wts(K,0);
+    vector<double> new_wts = pseudo_count_vec;
     for(int i=0;i<N;i++){
         for(int j=0;j<K;j++){
             double val = log10_BF_matrix[i][j] + log10(wts_matrix[j]) - log10_BF_avg[i];
@@ -52,7 +58,7 @@ double GenEM_mixture::EM_update(){
     }
 
     for(int j=0;j<K;j++){
-        wts_matrix[j] = new_wts[j]/N;
+        wts_matrix[j] = new_wts[j]/(N+pseudo_count);
     }
 
     return log10_lik;
@@ -70,9 +76,16 @@ double GenEM_mixture::compute_loglik(vector<double> &input_wts){
 
 
 
-double GenEM_mixture::EM_run(vector<vector<double> >& log10_BF_in, vector<double> & init_wts, double thresh){
+double GenEM_mixture::EM_run(vector<vector<double> >& log10_BF_in, vector<double> & init_wts, double thresh, double pseudo){
 
     EM_init(log10_BF_in, init_wts);
+    
+    pseudo_count = pseudo;
+
+    for(int i=0;i<K;i++){
+        pseudo_count_vec.push_back(init_wts[i]*pseudo_count);
+    }
+
     double log10_lik = EM_update();
     int iter = 1;
     while(1){
